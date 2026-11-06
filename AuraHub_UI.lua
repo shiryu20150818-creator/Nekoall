@@ -3264,3 +3264,95 @@ UpdateDynamic()
 task.delay(0.4, function()
 	Toast("success", APP_NAME .. " " .. VERSION, Tr("読み込み完了！ Toggleボタンで開閉できます", "Loaded! Use the Toggle button to open / close"), 4)
 end)
+local FTAP = {}
+function FTResolve()
+	local char = LocalPlayer.Character
+	if char then
+		for _, p in ipairs(char:GetDescendants()) do
+			if p:IsA("BasePart") then
+				for _, c in ipairs(p:GetChildren()) do
+					if FT.On.Grab and (c:IsA("BodyPosition") or c:IsA("BodyVelocity") or c:IsA("BodyGyro") or c:IsA("BodyForce") or c:IsA("BodyThrust") or c:IsA("BodyAngularVelocity") or c:IsA("RocketPropulsion")) then
+						pcall(function() c:Destroy() end)
+					elseif FT.On.Sticky and c:IsA("Attachment") then
+						local ok, cs = pcall(function() return c:GetConstraints() end)
+						if ok then for _, k in ipairs(cs) do pcall(function() k:Destroy() end) end end
+					end
+				end
+			end
+		end
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if FT.On.Ragdoll and hum then pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false) hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false) if hum.PlatformStand then hum.PlatformStand = false end hum:ChangeState(Enum.HumanoidStateType.GettingUp) end) end
+		if FT.On.Void and root then
+			local th = workspace.FallenPartsDestroyHeight
+			if root.Position.Y < ((th > -100000) and (th + 150) or -1000) then pcall(function() root.CFrame = root.CFrame + Vector3.new(0, 50, 0) end) end
+		end
+		if FT.On.Burn and hum then pcall(function() hum.Health = hum.MaxHealth end) end
+		if FT.On.Sit and hum then pcall(function() hum.Sit = false end) end
+	end
+	for _, o in ipairs(workspace:GetChildren()) do
+		if FT.On.Explosion and o:IsA("Explosion") then pcall(function() o.Visible = false end) end
+		if FT.On.Paint and o:IsA("Part") then pcall(function() if o.BrickColor ~= o.BrickColor then o.BrickColor = o.BrickColor end end) end
+	end
+end
+
+Connect(RunService.Heartbeat, function()
+	if FT.IsFTAP then pcall(FTResolve) end
+end)
+
+Connect(workspace.DescendantAdded, function(inst)
+	if not FT.IsFTAP then return end
+	if FT.On.Lag and (inst:IsA("ParticleEmitter") or inst:IsA("Smoke") or inst:IsA("Fire") or inst:IsA("Trail") or inst:IsA("Beam")) then
+		local ch = LocalPlayer.Character
+		if not (ch and inst:IsDescendantOf(ch)) then pcall(function() inst.Enabled = false end) end
+	end
+end)
+
+Connect(UserInputService.InputBegan, function(input)
+	if not FT.IsFTAP then return end
+	if input.KeyCode == Enum.KeyCode.G then
+		FT.On.Grab = not FT.On.Grab
+		Toast("info", Tr("GUCCI Anti-Grab", "GUCCI Anti-Grab"), FT.On.Grab and "ON" or "OFF", 2)
+	end
+end)
+
+local FTtab = CreateTab("FTAP", "shield-check", "FTAP", "FTAP")
+Section(FTtab, "FTAP Anti", "FTAP Anti")
+local function FTtoggle(ja, en, key, def)
+	Toggle(FTtab, ja, en, def, nil, function(s) FT.On[key] = s end, nil, ja, en)
+	FT.On[key] = def
+end
+FTtoggle("Anti-Grab", "Anti-Grab", "Grab", true)
+FTtoggle("Anti-Ragdoll", "Anti-Ragdoll", "Ragdoll", true)
+FTtoggle("Anti-Void", "Anti-Void", "Void", true)
+FTtoggle("Anti-Sit", "Anti-Sit", "Sit", true)
+FTtoggle("Anti-Sticky", "Anti-Sticky", "Sticky", true)
+FTtoggle("Anti-Lag", "Anti-Lag", "Lag", true)
+FTtoggle("Anti-Burn", "Anti-Burn", "Burn", true)
+FTtoggle("Anti-Explosion", "Anti-Explosion", "Explosion", true)
+FTtoggle("Anti-Paint", "Anti-Paint", "Paint", true)
+FTtoggle("Anti Network", "Anti Network", "Network", true)
+FTtoggle("GUCCI Anti-Grab", "GUCCI Anti-Grab", "Gucci", true)
+FTtoggle("Auto Delete Legs", "Auto Delete Legs", "Legs", false)
+Button(FTtab, "FTAP 有効化", "Enable FTAP", function()
+	FT.IsFTAP = true
+	Toast("success", "FTAP", "Enabled", 2)
+end, nil, "FTAP有効化", "Enable FTAP")
+Button(FTtab, "FTAP 無効化", "Disable FTAP", function()
+	FT.IsFTAP = false
+	Toast("info", "FTAP", "Disabled", 2)
+end, nil, "FTAP無効化", "Disable FTAP")
+
+local AuraAPI = {
+	CreateTab = CreateTab, Section = Section, Button = Button, Toggle = Toggle, Slider = Slider,
+	Chips = Chips, Input = Input, ListBox = ListBox, InfoLabel = InfoLabel, Toast = Toast, Notify = Notify,
+	Hooks = Hooks, Store = Store, Config = Config, RunHook = RunHook, RefreshLang = RefreshLang,
+	Unload = function()
+		for _, c in ipairs(Conns) do pcall(function() c:Disconnect() end) end
+		ProtAlive = false
+		FT.IsFTAP = false
+		pcall(function() Gui:Destroy() end)
+	end,
+}
+getgenv().AuraHub = AuraAPI
+return AuraAPI
